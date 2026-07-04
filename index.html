@@ -273,6 +273,28 @@
     border:1px solid rgba(255,255,255,0.06); border-radius:12px;
     padding:12px 14px; font-family:'Heebo',sans-serif; font-size:13px;
   }
+  .summarize-btn{
+    width:100%;
+    background:var(--accent-soft);
+    color:var(--accent);
+    border:1px solid var(--accent);
+    border-radius:12px;
+    padding:14px;
+    font-family:'Heebo',sans-serif;
+    font-weight:700;
+    font-size:15px;
+    cursor:pointer;
+    margin-top:4px;
+  }
+  .summarize-btn:active{transform:scale(0.98);}
+  .summarize-btn:disabled{opacity:0.5; cursor:default;}
+  .summary-status{
+    font-family:'Heebo',sans-serif;
+    font-size:13px;
+    color:var(--text-muted);
+    min-height:18px;
+    text-align:center;
+  }
 </style>
 </head>
 <body>
@@ -321,6 +343,9 @@
     <div class="rate-row" id="rateRow"></div>
 
     <select class="voice-select" id="voiceSelect"></select>
+
+    <button class="summarize-btn" id="summarizeBtn" onclick="summarizeCurrent()">✦ צור תקציר</button>
+    <div class="summary-status" id="summaryStatus"></div>
   </div>
 
 </main>
@@ -386,16 +411,17 @@ if(!window.storage){
 
 let documents = [];       // {id, title, createdAt, chunkCount}
 let currentDoc = null;    // full doc object with .content
+let currentContent = "";  // texto completo del documento abierto (para resumir)
 let chunks = [];
 let currentIndex = 0;
 let isPlaying = false;
 let manualStop = false;
-let currentRate = 1;
+let currentRate = 0.75;
 let selectedVoice = null;
 let pendingFileText = "";
 let activeTab = 'paste';
 
-const RATES = [0.75, 1, 1.25, 1.5, 1.75, 2];
+const RATES = [0.5, 0.6, 0.75, 1, 1.25, 1.5];
 
 // ---------- INIT ----------
 init();
@@ -565,11 +591,14 @@ async function openDoc(id){
   }catch(e){ progress = 0; }
 
   currentDoc = meta;
+  currentContent = content;
   chunks = splitChunks(content);
   currentIndex = Math.min(progress, Math.max(chunks.length - 1, 0));
   isPlaying = false;
 
   document.getElementById('playerTitle').textContent = meta.title;
+  document.getElementById('summaryStatus').textContent = '';
+  document.getElementById('summarizeBtn').disabled = false;
   document.getElementById('queueView').style.display = 'none';
   document.getElementById('playerView').classList.add('open');
   updateUI();
@@ -682,6 +711,46 @@ function setRate(r){
     manualStop = true;
     speechSynthesis.cancel();
     speakChunk(currentIndex);
+  }
+}
+
+// ---------- RESUMEN ----------
+async function summarizeCurrent(){
+  if(!currentContent || !currentContent.trim()){
+    document.getElementById('summaryStatus').textContent = 'אין טקסט לתקצר.';
+    return;
+  }
+  const btn = document.getElementById('summarizeBtn');
+  const status = document.getElementById('summaryStatus');
+  btn.disabled = true;
+  status.textContent = 'יוצר תקציר... (עד דקה)';
+
+  try{
+    const res = await fetch('/api/summarize', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({text: currentContent})
+    });
+    const data = await res.json();
+    if(!res.ok || data.error){
+      throw new Error(data.error || 'שגיאה');
+    }
+    const summary = data.summary;
+
+    // Guardar el resumen como un documento nuevo en la cola
+    const id = 'd' + Date.now();
+    const chunkArr = splitChunks(summary);
+    const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
+    const doc = {id, title: 'תקציר: ' + baseTitle, createdAt: Date.now(), chunkCount: chunkArr.length, progress: 0};
+    documents.push(doc);
+    await window.storage.set('documents-list', JSON.stringify(documents), false);
+    await window.storage.set('doc-content:' + id, summary, false);
+
+    status.textContent = '✓ התקציר נשמר בתור.';
+    btn.disabled = false;
+  }catch(e){
+    status.textContent = 'שגיאה: ' + e.message;
+    btn.disabled = false;
   }
 }
 </script>
