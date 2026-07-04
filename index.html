@@ -344,7 +344,8 @@
 
     <select class="voice-select" id="voiceSelect"></select>
 
-    <button class="summarize-btn" id="summarizeBtn" onclick="summarizeCurrent()">✦ צור תקציר</button>
+    <button class="summarize-btn" id="friendlyBtn" onclick="processCurrent('friendly')">♥ גרסה ידידותית להאזנה</button>
+    <button class="summarize-btn" id="summarizeBtn" onclick="processCurrent('summary')">✦ צור תקציר</button>
     <div class="summary-status" id="summaryStatus"></div>
   </div>
 
@@ -599,6 +600,7 @@ async function openDoc(id){
   document.getElementById('playerTitle').textContent = meta.title;
   document.getElementById('summaryStatus').textContent = '';
   document.getElementById('summarizeBtn').disabled = false;
+  document.getElementById('friendlyBtn').disabled = false;
   document.getElementById('queueView').style.display = 'none';
   document.getElementById('playerView').classList.add('open');
   updateUI();
@@ -714,44 +716,50 @@ function setRate(r){
   }
 }
 
-// ---------- RESUMEN ----------
-async function summarizeCurrent(){
+// ---------- PROCESAMIENTO CON IA (resumen / lectura amigable) ----------
+async function processCurrent(mode){
   if(!currentContent || !currentContent.trim()){
-    document.getElementById('summaryStatus').textContent = 'אין טקסט לתקצר.';
+    document.getElementById('summaryStatus').textContent = 'אין טקסט לעיבוד.';
     return;
   }
-  const btn = document.getElementById('summarizeBtn');
+  const sumBtn = document.getElementById('summarizeBtn');
+  const friBtn = document.getElementById('friendlyBtn');
   const status = document.getElementById('summaryStatus');
-  btn.disabled = true;
-  status.textContent = 'יוצר תקציר... (עד דקה)';
+  sumBtn.disabled = true;
+  friBtn.disabled = true;
+  status.textContent = mode === 'friendly' ? 'מכין גרסה ידידותית... (עד דקה)' : 'יוצר תקציר... (עד דקה)';
 
   try{
     const res = await fetch('/api/summarize', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({text: currentContent})
+      body: JSON.stringify({
+        text: currentContent,
+        mode: mode,
+        title: currentDoc ? currentDoc.title : ''
+      })
     });
     const data = await res.json();
     if(!res.ok || data.error){
       throw new Error(data.error || 'שגיאה');
     }
-    const summary = data.summary;
+    const result = data.summary;
 
-    // Guardar el resumen como un documento nuevo en la cola
     const id = 'd' + Date.now();
-    const chunkArr = splitChunks(summary);
+    const chunkArr = splitChunks(result);
     const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
-    const doc = {id, title: 'תקציר: ' + baseTitle, createdAt: Date.now(), chunkCount: chunkArr.length, progress: 0};
+    const prefix = mode === 'friendly' ? 'גרסה ידידותית: ' : 'תקציר: ';
+    const doc = {id, title: prefix + baseTitle, createdAt: Date.now(), chunkCount: chunkArr.length, progress: 0};
     documents.push(doc);
     await window.storage.set('documents-list', JSON.stringify(documents), false);
-    await window.storage.set('doc-content:' + id, summary, false);
+    await window.storage.set('doc-content:' + id, result, false);
 
-    status.textContent = '✓ התקציר נשמר בתור.';
-    btn.disabled = false;
+    status.textContent = '✓ נשמר בתור. חזרו אחורה כדי להאזין.';
   }catch(e){
     status.textContent = 'שגיאה: ' + e.message;
-    btn.disabled = false;
   }
+  sumBtn.disabled = false;
+  friBtn.disabled = false;
 }
 </script>
 </body>
