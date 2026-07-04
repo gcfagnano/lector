@@ -1,14 +1,14 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-<title>Lector</title>
+<title>קורא</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg:#14171C;
@@ -27,7 +27,7 @@
     margin:0;
     background:var(--bg);
     color:var(--text);
-    font-family:'Inter',sans-serif;
+    font-family:'Heebo',sans-serif;
     display:flex;
     flex-direction:column;
     min-height:100vh;
@@ -41,7 +41,7 @@
     border-bottom:1px solid rgba(255,255,255,0.06);
   }
   header .brand{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-weight:700;
     font-size:20px;
     letter-spacing:0.06em;
@@ -76,7 +76,7 @@
     border:none;
     border-radius:14px;
     padding:16px;
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-weight:600;
     font-size:15px;
     cursor:pointer;
@@ -90,7 +90,7 @@
     line-height:1.6;
   }
   .empty-state .glyph{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-size:34px;
     color:var(--accent);
     margin-bottom:10px;
@@ -111,7 +111,7 @@
     width:44px;height:44px;border-radius:12px;
     background:var(--accent-soft);
     display:flex;align-items:center;justify-content:center;
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     color:var(--accent);
     font-weight:700;
     font-size:15px;
@@ -119,7 +119,7 @@
   }
   .doc-info{flex:1; min-width:0;}
   .doc-title{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-weight:600;
     font-size:15px;
     white-space:nowrap;
@@ -156,7 +156,7 @@
     margin-bottom:16px;
   }
   .panel-header h2{
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-size:18px; margin:0;
   }
   .close-btn{
@@ -181,7 +181,7 @@
     color:var(--text);
     padding:14px;
     font-size:14px;
-    font-family:'Inter',sans-serif;
+    font-family:'Heebo',sans-serif;
     resize:none;
     min-height:200px;
   }
@@ -192,7 +192,7 @@
     color:var(--text);
     padding:12px 14px;
     font-size:14px;
-    font-family:'Inter',sans-serif;
+    font-family:'Heebo',sans-serif;
     margin-bottom:10px;
   }
   .upload-zone{
@@ -209,7 +209,7 @@
     background:var(--accent);
     color:#1A1300;
     border:none; border-radius:14px; padding:15px;
-    font-family:'Space Grotesk',sans-serif;
+    font-family:'Heebo',sans-serif;
     font-weight:700; font-size:15px; cursor:pointer;
   }
   .save-btn:disabled{opacity:0.4;}
@@ -227,7 +227,7 @@
     width:38px;height:38px;border-radius:10px; font-size:18px; cursor:pointer;
   }
   .player-title{
-    font-family:'Space Grotesk',sans-serif; font-weight:600; font-size:15px;
+    font-family:'Heebo',sans-serif; font-weight:600; font-size:15px;
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap; flex:1;
   }
 
@@ -243,7 +243,7 @@
     display:flex; align-items:center; justify-content:center;
     cursor:pointer;
   }
-  .dial-btn .icon{font-size:44px; color:var(--accent); font-family:'Space Grotesk',sans-serif;}
+  .dial-btn .icon{font-size:44px; color:var(--accent); font-family:'Heebo',sans-serif;}
   .readout{
     font-family:'JetBrains Mono',monospace;
     font-size:13px; color:var(--text-muted); letter-spacing:0.04em;
@@ -271,29 +271,29 @@
   .voice-select{
     width:100%; background:var(--panel); color:var(--text);
     border:1px solid rgba(255,255,255,0.06); border-radius:12px;
-    padding:12px 14px; font-family:'Inter',sans-serif; font-size:13px;
+    padding:12px 14px; font-family:'Heebo',sans-serif; font-size:13px;
   }
 </style>
 </head>
 <body>
 
 <header>
-  <div class="brand">LEC<span>TOR</span></div>
-  <div class="count" id="headerCount">0 documentos</div>
+  <div class="brand">קו<span>רא</span></div>
+  <div class="count" id="headerCount">0 מסמכים</div>
 </header>
 
 <main>
 
   <!-- QUEUE -->
   <div id="queueView">
-    <button class="add-btn" onclick="openAddPanel()">＋ Agregar documento</button>
+    <button class="add-btn" onclick="openAddPanel()">＋ הוספת מסמך</button>
     <div id="queueList"></div>
   </div>
 
   <!-- PLAYER -->
   <div id="playerView">
     <div class="back-row">
-      <button class="back-btn" onclick="closePlayer()">←</button>
+      <button class="back-btn" onclick="closePlayer()">→</button>
       <div class="player-title" id="playerTitle">—</div>
       <button class="doc-del" onclick="deleteCurrentDoc()">🗑</button>
     </div>
@@ -313,8 +313,8 @@
 
     <div class="skip-row">
       <button class="skip-btn" onclick="skip(-1)">⟲</button>
-      <button class="skip-btn" onclick="skip(-5)">«</button>
-      <button class="skip-btn" onclick="skip(5)">»</button>
+      <button class="skip-btn" onclick="skip(-5)">»</button>
+      <button class="skip-btn" onclick="skip(5)">«</button>
       <button class="skip-btn" onclick="skip(1)">⟳</button>
     </div>
 
@@ -328,30 +328,30 @@
 <!-- ADD PANEL -->
 <div id="addPanel">
   <div class="panel-header">
-    <h2>Nuevo documento</h2>
+    <h2>מסמך חדש</h2>
     <button class="close-btn" onclick="closeAddPanel()">✕</button>
   </div>
   <div class="tabs">
-    <div class="tab active" id="tabPaste" onclick="switchTab('paste')">Pegar texto</div>
-    <div class="tab" id="tabFile" onclick="switchTab('file')">Subir archivo</div>
+    <div class="tab active" id="tabPaste" onclick="switchTab('paste')">הדבקת טקסט</div>
+    <div class="tab" id="tabFile" onclick="switchTab('file')">העלאת קובץ</div>
   </div>
 
   <div id="pasteTab" style="display:flex; flex-direction:column; flex:1;">
-    <input type="text" id="pasteTitle" placeholder="Título del documento" />
-    <textarea id="pasteText" placeholder="Pegá el texto acá..."></textarea>
+    <input type="text" id="pasteTitle" placeholder="כותרת המסמך" />
+    <textarea id="pasteText" dir="auto" placeholder="הדביקו כאן את הטקסט..."></textarea>
   </div>
 
   <div id="fileTab" style="display:none; flex-direction:column; flex:1;">
-    <input type="text" id="fileTitle" placeholder="Título (opcional, usa el nombre del archivo)" />
+    <input type="text" id="fileTitle" placeholder="כותרת (אופציונלי, ישתמש בשם הקובץ)" />
     <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
       <div class="glyph">⇪</div>
-      <div id="fileZoneLabel">Tocá para elegir un archivo (.txt, .pdf, .docx)</div>
+      <div id="fileZoneLabel">הקישו לבחירת קובץ (‎.txt, .pdf, .docx‎)</div>
     </div>
     <input type="file" id="fileInput" accept=".txt,.pdf,.docx" style="display:none" onchange="handleFile(event)" />
   </div>
 
   <div class="status-line" id="statusLine"></div>
-  <button class="save-btn" id="saveBtn" onclick="saveDocument()">Guardar y agregar a la cola</button>
+  <button class="save-btn" id="saveBtn" onclick="saveDocument()">שמירה והוספה לתור</button>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -415,9 +415,9 @@ async function init(){
 function renderQueue(){
   const list = document.getElementById('queueList');
   document.getElementById('headerCount').textContent =
-    documents.length + (documents.length===1 ? ' documento' : ' documentos');
+    documents.length + (documents.length===1 ? ' מסמך' : ' מסמכים');
   if(documents.length === 0){
-    list.innerHTML = `<div class="empty-state"><span class="glyph">◎</span>Todavía no cargaste nada.<br>Agregá un documento para empezar a escuchar.</div>`;
+    list.innerHTML = `<div class="empty-state"><span class="glyph">◎</span>עדיין לא הוספת מסמכים.<br>הוסיפו מסמך כדי להתחיל להאזין.</div>`;
     return;
   }
   list.innerHTML = documents.slice().reverse().map(d => `
@@ -425,7 +425,7 @@ function renderQueue(){
       <div class="doc-icon">${(d.title||'D').slice(0,2).toUpperCase()}</div>
       <div class="doc-info">
         <div class="doc-title">${escapeHtml(d.title)}</div>
-        <div class="doc-meta">${d.chunkCount} frases · ${d.progress||0}/${d.chunkCount} leídas</div>
+        <div class="doc-meta">${d.chunkCount} משפטים · ${d.progress||0}/${d.chunkCount} נקראו</div>
       </div>
       <button class="doc-del" onclick="event.stopPropagation(); deleteDoc('${d.id}')">🗑</button>
     </div>
@@ -442,7 +442,7 @@ function openAddPanel(){
   document.getElementById('pasteTitle').value = '';
   document.getElementById('pasteText').value = '';
   document.getElementById('fileTitle').value = '';
-  document.getElementById('fileZoneLabel').textContent = 'Tocá para elegir un archivo (.txt, .pdf, .docx)';
+  document.getElementById('fileZoneLabel').textContent = 'הקישו לבחירת קובץ (‎.txt, .pdf, .docx‎)';
   document.getElementById('statusLine').textContent = '';
   pendingFileText = '';
   switchTab('paste');
@@ -461,7 +461,7 @@ function switchTab(t){
 async function handleFile(ev){
   const file = ev.target.files[0];
   if(!file) return;
-  document.getElementById('fileZoneLabel').textContent = 'Leyendo "' + file.name + '"...';
+  document.getElementById('fileZoneLabel').textContent = 'קורא את "' + file.name + '"...';
   document.getElementById('statusLine').textContent = '';
   const ext = file.name.split('.').pop().toLowerCase();
   try{
@@ -482,14 +482,14 @@ async function handleFile(ev){
       const result = await mammoth.extractRawText({arrayBuffer: buf});
       pendingFileText = result.value;
     } else {
-      throw new Error('Formato no soportado');
+      throw new Error('פורמט לא נתמך');
     }
-    document.getElementById('fileZoneLabel').textContent = '"' + file.name + '" listo (' + pendingFileText.length + ' caracteres)';
+    document.getElementById('fileZoneLabel').textContent = '"' + file.name + '" מוכן (' + pendingFileText.length + ' תווים)';
     if(!document.getElementById('fileTitle').value){
       document.getElementById('fileTitle').value = file.name.replace(/\.[^/.]+$/, '');
     }
   }catch(e){
-    document.getElementById('statusLine').textContent = 'Error leyendo el archivo: ' + e.message;
+    document.getElementById('statusLine').textContent = 'שגיאה בקריאת הקובץ: ' + e.message;
     pendingFileText = '';
   }
 }
@@ -497,14 +497,14 @@ async function handleFile(ev){
 async function saveDocument(){
   let title, text;
   if(activeTab === 'paste'){
-    title = document.getElementById('pasteTitle').value.trim() || 'Sin título';
+    title = document.getElementById('pasteTitle').value.trim() || 'ללא כותרת';
     text = document.getElementById('pasteText').value.trim();
   } else {
-    title = document.getElementById('fileTitle').value.trim() || 'Sin título';
+    title = document.getElementById('fileTitle').value.trim() || 'ללא כותרת';
     text = pendingFileText.trim();
   }
   if(!text){
-    document.getElementById('statusLine').textContent = 'Falta texto para guardar.';
+    document.getElementById('statusLine').textContent = 'חסר טקסט לשמירה.';
     return;
   }
   const id = 'd' + Date.now();
@@ -515,7 +515,7 @@ async function saveDocument(){
     await window.storage.set('documents-list', JSON.stringify(documents), false);
     await window.storage.set('doc-content:' + id, text, false);
   }catch(e){
-    document.getElementById('statusLine').textContent = 'Error guardando: ' + e.message;
+    document.getElementById('statusLine').textContent = 'שגיאה בשמירה: ' + e.message;
     return;
   }
   closeAddPanel();
@@ -541,7 +541,8 @@ function deleteCurrentDoc(){
 
 // ---------- CHUNKING ----------
 function splitChunks(text){
-  const raw = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+  // Separa por signos latinos (. ! ?), hebreos (׃ sof pasuk ׀) y saltos de línea
+  const raw = text.match(/[^.!?\n׃׀\u05C3]+[.!?\n׃׀\u05C3]*/g) || [text];
   return raw.map(s => s.trim()).filter(s => s.length > 0);
 }
 
@@ -554,7 +555,7 @@ async function openDoc(id){
     const res = await window.storage.get('doc-content:' + id, false);
     content = res ? res.value : '';
   }catch(e){
-    alert('No pude cargar el documento.');
+    alert('לא הצלחתי לטעון את המסמך.');
     return;
   }
   let progress = 0;
@@ -613,7 +614,7 @@ function speakChunk(i){
   const utter = new SpeechSynthesisUtterance(chunks[i]);
   if(selectedVoice) utter.voice = selectedVoice;
   utter.rate = currentRate;
-  utter.lang = (selectedVoice && selectedVoice.lang) || 'es-ES';
+  utter.lang = (selectedVoice && selectedVoice.lang) || 'he-IL';
   utter.onend = () => {
     if(manualStop){ manualStop = false; return; }
     saveProgress(i + 1);
@@ -656,8 +657,8 @@ function skip(delta){
 // ---------- VOICES ----------
 function loadVoices(){
   const voices = speechSynthesis.getVoices();
-  const esVoices = voices.filter(v => v.lang.toLowerCase().startsWith('es'));
-  const list = esVoices.length ? esVoices : voices;
+  const heVoices = voices.filter(v => v.lang.toLowerCase().startsWith('he') || v.lang.toLowerCase().startsWith('iw'));
+  const list = heVoices.length ? heVoices : voices;
   const sel = document.getElementById('voiceSelect');
   sel.innerHTML = list.map((v, i) => `<option value="${i}">${v.name} (${v.lang})</option>`).join('');
   sel.onchange = () => { selectedVoice = list[sel.value]; if(isPlaying){ manualStop = true; speechSynthesis.cancel(); speakChunk(currentIndex);} };
