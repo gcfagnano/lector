@@ -359,6 +359,31 @@
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
+// Polyfill de almacenamiento: usa localStorage del navegador cuando la app
+// corre como sitio propio (Vercel, GitHub Pages, etc). Si en algún momento
+// se abre dentro del entorno de artefactos de Claude, se usa el nativo.
+if(!window.storage){
+  window.storage = {
+    async get(key, shared){
+      const raw = localStorage.getItem(key);
+      if(raw === null){ throw new Error('key not found: ' + key); }
+      return {key, value: raw, shared: !!shared};
+    },
+    async set(key, value, shared){
+      localStorage.setItem(key, value);
+      return {key, value, shared: !!shared};
+    },
+    async delete(key, shared){
+      localStorage.removeItem(key);
+      return {key, deleted: true, shared: !!shared};
+    },
+    async list(prefix, shared){
+      const keys = Object.keys(localStorage).filter(k => !prefix || k.startsWith(prefix));
+      return {keys, prefix, shared: !!shared};
+    }
+  };
+}
+
 let documents = [];       // {id, title, createdAt, chunkCount}
 let currentDoc = null;    // full doc object with .content
 let chunks = [];
