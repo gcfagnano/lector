@@ -308,6 +308,23 @@
     cursor:pointer;
     margin-top:4px;
   }
+  .process-box{
+    width:100%;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:16px;
+    padding:14px;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .process-label{
+    font-family:'Heebo',sans-serif;
+    font-size:13px;
+    color:var(--text-muted);
+    text-align:center;
+    margin-bottom:2px;
+  }
   .summarize-btn:active{transform:scale(0.98);}
   .summarize-btn:disabled{opacity:0.5; cursor:default;}
   .summary-status{
@@ -342,6 +359,13 @@
       <button class="doc-del" onclick="deleteCurrentDoc()">🗑</button>
     </div>
 
+    <div class="process-box">
+      <div class="process-label">עיבוד הטקסט לפני האזנה</div>
+      <button class="summarize-btn" id="podcastBtn" onclick="processCurrent('podcast')">🎧 גרסת פודקאסט</button>
+      <button class="summarize-btn" id="summarizeBtn" onclick="processCurrent('summary')">✦ תקציר קצר</button>
+      <div class="summary-status" id="summaryStatus"></div>
+    </div>
+
     <div class="dial-wrap">
       <svg viewBox="0 0 220 220">
         <circle class="dial-track" cx="110" cy="110" r="98"></circle>
@@ -367,10 +391,6 @@
     <div class="rate-row" id="rateRow"></div>
 
     <select class="voice-select" id="voiceSelect"></select>
-
-    <button class="summarize-btn" id="friendlyBtn" onclick="processCurrent('friendly')">♥ גרסה ידידותית להאזנה</button>
-    <button class="summarize-btn" id="summarizeBtn" onclick="processCurrent('summary')">✦ צור תקציר</button>
-    <div class="summary-status" id="summaryStatus"></div>
   </div>
 
 </main>
@@ -637,7 +657,7 @@ async function openDoc(id){
   document.getElementById('playerTitle').textContent = meta.title;
   document.getElementById('summaryStatus').textContent = '';
   document.getElementById('summarizeBtn').disabled = false;
-  document.getElementById('friendlyBtn').disabled = false;
+  document.getElementById('podcastBtn').disabled = false;
   document.getElementById('queueView').style.display = 'none';
   document.getElementById('playerView').classList.add('open');
   renderTextView();
@@ -781,15 +801,15 @@ async function processCurrent(mode){
     return;
   }
   const sumBtn = document.getElementById('summarizeBtn');
-  const friBtn = document.getElementById('friendlyBtn');
+  const podBtn = document.getElementById('podcastBtn');
   const status = document.getElementById('summaryStatus');
   sumBtn.disabled = true;
-  friBtn.disabled = true;
+  podBtn.disabled = true;
   // Frenar cualquier lectura en curso
   isPlaying = false;
   manualStop = true;
   speechSynthesis.cancel();
-  status.textContent = mode === 'friendly' ? 'מכין גרסה ידידותית... (עד דקה)' : 'יוצר תקציר... (עד דקה)';
+  status.textContent = mode === 'podcast' ? 'מכין גרסת פודקאסט... (עד דקה)' : 'יוצר תקציר... (עד דקה)';
 
   try{
     const res = await fetch('/api/summarize', {
@@ -811,7 +831,7 @@ async function processCurrent(mode){
     const id = 'd' + Date.now();
     const newChunks = splitChunks(result);
     const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
-    const prefix = mode === 'friendly' ? 'גרסה ידידותית: ' : 'תקציר: ';
+    const prefix = mode === 'podcast' ? 'פודקאסט: ' : 'תקציר: ';
     const doc = {id, title: prefix + baseTitle, createdAt: Date.now(), chunkCount: newChunks.length, progress: 0};
     documents.push(doc);
     await window.storage.set('documents-list', JSON.stringify(documents), false);
@@ -827,7 +847,7 @@ async function processCurrent(mode){
     updateUI();
 
     // 3) Empezar a leerlo automáticamente
-    status.textContent = mode === 'friendly' ? '✓ קורא את הגרסה הידידותית' : '✓ קורא את התקציר';
+    status.textContent = mode === 'podcast' ? '✓ קורא את גרסת הפודקאסט' : '✓ קורא את התקציר';
     manualStop = false;
     isPlaying = true;
     speakChunk(0);
@@ -835,7 +855,7 @@ async function processCurrent(mode){
     status.textContent = 'שגיאה: ' + e.message;
   }
   sumBtn.disabled = false;
-  friBtn.disabled = false;
+  podBtn.disabled = false;
 }
 </script>
 </body>
