@@ -561,7 +561,17 @@ async function handleFile(ev){
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({pdf: base64})
       });
-      const data = await res.json();
+      // Leer como texto primero, para detectar respuestas que no son JSON
+      const raw = await res.text();
+      let data;
+      try {
+        data = JSON.parse(raw);
+      } catch(parseErr) {
+        if(res.status === 404){
+          throw new Error('הקובץ api/extract.js לא נמצא בשרת. ודאו שהעליתם אותו לתיקיית api.');
+        }
+        throw new Error('תשובה לא תקינה מהשרת (קוד ' + res.status + '). בדקו שהקובץ api/extract.js הועלה נכון.');
+      }
       if(!res.ok || data.error){
         throw new Error(data.error || 'שגיאה בחילוץ');
       }
@@ -826,7 +836,16 @@ async function processCurrent(mode){
         title: currentDoc ? currentDoc.title : ''
       })
     });
-    const data = await res.json();
+    const raw = await res.text();
+    let data;
+    try {
+      data = JSON.parse(raw);
+    } catch(parseErr) {
+      if(res.status === 404){
+        throw new Error('הקובץ api/summarize.js לא נמצא בשרת. ודאו שהעליתם אותו לתיקיית api.');
+      }
+      throw new Error('תשובה לא תקינה מהשרת (קוד ' + res.status + ').');
+    }
     if(!res.ok || data.error){
       throw new Error(data.error || 'שגיאה');
     }
