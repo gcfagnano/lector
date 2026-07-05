@@ -544,12 +544,17 @@ async function handleFile(ev){
         throw new Error('קובץ ה-PDF גדול מדי (מקסימום 4MB). נסו לפצל אותו.');
       }
       document.getElementById('fileZoneLabel').textContent = 'מחלץ טקסט עברי מה-PDF... (עד דקה)';
-      // Convertir a base64
-      const buf = await file.arrayBuffer();
-      const bytes = new Uint8Array(buf);
-      let binary = '';
-      for(let i=0; i<bytes.length; i++){ binary += String.fromCharCode(bytes[i]); }
-      const base64 = btoa(binary);
+      // Convertir a base64 con FileReader (robusto en iOS/Safari)
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result || '';
+          const comma = result.indexOf(',');
+          resolve(comma >= 0 ? result.slice(comma + 1) : result);
+        };
+        reader.onerror = () => reject(new Error('קריאת הקובץ נכשלה'));
+        reader.readAsDataURL(file);
+      });
       // Enviar a la extracción visual (Claude)
       const res = await fetch('/api/extract', {
         method: 'POST',
