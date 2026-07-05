@@ -6,6 +6,8 @@
 // La clave de API queda protegida en el servidor (variable de entorno ANTHROPIC_API_KEY),
 // nunca se expone en el navegador.
 
+export const config = { maxDuration: 60 };
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
