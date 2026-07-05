@@ -248,6 +248,28 @@
     font-family:'JetBrains Mono',monospace;
     font-size:13px; color:var(--text-muted); letter-spacing:0.04em;
   }
+  .text-view{
+    width:100%;
+    max-height:180px;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid rgba(255,255,255,0.06);
+    border-radius:14px;
+    padding:14px 16px;
+    font-family:'Heebo',sans-serif;
+    font-size:16px;
+    line-height:1.9;
+    color:var(--text-muted);
+    text-align:right;
+  }
+  .text-view .sentence{ transition:color 0.2s, background 0.2s; }
+  .text-view .sentence.active{
+    color:var(--accent);
+    font-weight:700;
+    background:var(--accent-soft);
+    border-radius:6px;
+    padding:1px 4px;
+  }
 
   .skip-row{display:flex; gap:20px; align-items:center;}
   .skip-btn{
@@ -332,6 +354,8 @@
     </div>
 
     <div class="readout" id="progressReadout">0 / 0</div>
+
+    <div class="text-view" id="textView"></div>
 
     <div class="skip-row">
       <button class="skip-btn" onclick="skip(-1)">⟲</button>
@@ -603,6 +627,7 @@ async function openDoc(id){
   document.getElementById('friendlyBtn').disabled = false;
   document.getElementById('queueView').style.display = 'none';
   document.getElementById('playerView').classList.add('open');
+  renderTextView();
   updateUI();
 }
 
@@ -614,12 +639,32 @@ function closePlayer(){
   renderQueue();
 }
 
+function renderTextView(){
+  const tv = document.getElementById('textView');
+  if(!tv) return;
+  tv.innerHTML = chunks.map((c, i) =>
+    `<span class="sentence${i === currentIndex ? ' active' : ''}" id="sent-${i}">${escapeHtml(c)}</span> `
+  ).join('');
+}
+
+function highlightActive(){
+  const tv = document.getElementById('textView');
+  if(!tv) return;
+  tv.querySelectorAll('.sentence.active').forEach(el => el.classList.remove('active'));
+  const el = document.getElementById('sent-' + currentIndex);
+  if(el){
+    el.classList.add('active');
+    el.scrollIntoView({block:'center', behavior:'smooth'});
+  }
+}
+
 function updateUI(){
   document.getElementById('dialIcon').textContent = isPlaying ? '❚❚' : '▶';
   document.getElementById('progressReadout').textContent = (currentIndex) + ' / ' + chunks.length;
   const circumference = 615.75;
   const pct = chunks.length ? currentIndex / chunks.length : 0;
   document.getElementById('dialProgress').style.strokeDashoffset = circumference * (1 - pct);
+  highlightActive();
 }
 
 async function saveProgress(idx){
@@ -727,6 +772,10 @@ async function processCurrent(mode){
   const status = document.getElementById('summaryStatus');
   sumBtn.disabled = true;
   friBtn.disabled = true;
+  // Frenar cualquier lectura en curso
+  isPlaying = false;
+  manualStop = true;
+  speechSynthesis.cancel();
   status.textContent = mode === 'friendly' ? 'מכין גרסה ידידותית... (עד דקה)' : 'יוצר תקציר... (עד דקה)';
 
   try{
@@ -745,16 +794,30 @@ async function processCurrent(mode){
     }
     const result = data.summary;
 
+    // 1) Guardar como documento nuevo en la cola (para no perderlo)
     const id = 'd' + Date.now();
-    const chunkArr = splitChunks(result);
+    const newChunks = splitChunks(result);
     const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
     const prefix = mode === 'friendly' ? 'גרסה ידידותית: ' : 'תקציר: ';
-    const doc = {id, title: prefix + baseTitle, createdAt: Date.now(), chunkCount: chunkArr.length, progress: 0};
+    const doc = {id, title: prefix + baseTitle, createdAt: Date.now(), chunkCount: newChunks.length, progress: 0};
     documents.push(doc);
     await window.storage.set('documents-list', JSON.stringify(documents), false);
     await window.storage.set('doc-content:' + id, result, false);
 
-    status.textContent = '✓ נשמר בתור. חזרו אחורה כדי להאזין.';
+    // 2) Cargar el resultado directamente en el reproductor actual
+    currentDoc = doc;
+    currentContent = result;
+    chunks = newChunks;
+    currentIndex = 0;
+    document.getElementById('playerTitle').textContent = doc.title;
+    renderTextView();
+    updateUI();
+
+    // 3) Empezar a leerlo automáticamente
+    status.textContent = mode === 'friendly' ? '✓ קורא את הגרסה הידידותית' : '✓ קורא את התקציר';
+    manualStop = false;
+    isPlaying = true;
+    speakChunk(0);
   }catch(e){
     status.textContent = 'שגיאה: ' + e.message;
   }
