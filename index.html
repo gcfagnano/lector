@@ -467,7 +467,7 @@ let selectedVoice = null;
 let pendingFileText = "";
 let activeTab = 'paste';
 
-const RATES = [0.5, 0.6, 0.75, 1, 1.25, 1.5];
+const RATES = [0.3, 0.4, 0.5, 0.6, 0.75, 1, 1.25, 1.5];
 
 // ---------- INIT ----------
 init();
@@ -551,14 +551,14 @@ async function handleFile(ev){
           document.getElementById('fileZoneLabel').textContent =
             `מזהה טקסט בעברית - עמוד ${i} מתוך ${pdf.numPages}... (יכול לקחת זמן)`;
           const page = await pdf.getPage(i);
-          const viewport = page.getViewport({scale: 2});
+          const viewport = page.getViewport({scale: 3});
           const canvas = document.createElement('canvas');
           canvas.width = viewport.width;
           canvas.height = viewport.height;
           const ctx = canvas.getContext('2d');
           await page.render({canvasContext: ctx, viewport: viewport}).promise;
           const { data: ocrData } = await worker.recognize(canvas);
-          fullText += (ocrData.text || '') + '\n\n';
+          fullText += cleanOcrText(ocrData.text || '') + '\n\n';
         }
       } finally {
         await worker.terminate();
@@ -630,6 +630,14 @@ function deleteCurrentDoc(){
 }
 
 // ---------- CHUNKING ----------
+function cleanOcrText(raw){
+  return (raw || '')
+    .replace(/[ \t]+/g, ' ')        // espacios múltiples
+    .replace(/\n{3,}/g, '\n\n')     // más de 2 saltos seguidos
+    .replace(/[ \t]+\n/g, '\n')     // espacios antes de salto de línea
+    .trim();
+}
+
 function splitChunks(text){
   // Separa por signos latinos (. ! ?), hebreos (׃ sof pasuk ׀) y saltos de línea
   const raw = text.match(/[^.!?\n׃׀\u05C3]+[.!?\n׃׀\u05C3]*/g) || [text];
