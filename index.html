@@ -360,8 +360,8 @@
     </div>
 
     <div class="process-box">
-      <div class="process-label">עיבוד הטקסט לפני האזנה</div>
-      <button class="summarize-btn" id="podcastBtn" onclick="processCurrent('podcast')">🎧 גרסת פודקאסט</button>
+      <div class="process-label">תקציר אוטומטי לפני האזנה (ללא עלות)</div>
+      <button class="summarize-btn" id="podcastBtn" onclick="processCurrent('podcast')">📝 תקציר מורחב</button>
       <button class="summarize-btn" id="summarizeBtn" onclick="processCurrent('summary')">✦ תקציר קצר</button>
       <div class="summary-status" id="summaryStatus"></div>
     </div>
@@ -426,6 +426,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.0.4/tesseract.min.js"></script>
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
@@ -539,43 +540,33 @@ async function handleFile(ev){
     if(ext === 'txt'){
       pendingFileText = await file.text();
     } else if(ext === 'pdf'){
-      // Validar tamaño (el servidor acepta hasta ~4.5MB de cuerpo)
-      if(file.size > 4 * 1024 * 1024){
-        throw new Error('קובץ ה-PDF גדול מדי (מקסימום 4MB). נסו לפצל אותו.');
-      }
-      document.getElementById('fileZoneLabel').textContent = 'מחלץ טקסט עברי מה-PDF... (עד דקה)';
-      // Convertir a base64 con FileReader (robusto en iOS/Safari)
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result || '';
-          const comma = result.indexOf(',');
-          resolve(comma >= 0 ? result.slice(comma + 1) : result);
-        };
-        reader.onerror = () => reject(new Error('קריאת הקובץ נכשלה'));
-        reader.readAsDataURL(file);
-      });
-      // Enviar a la extracción visual (Claude)
-      const res = await fetch('/api/extract', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({pdf: base64})
-      });
-      // Leer como texto primero, para detectar respuestas que no son JSON
-      const raw = await res.text();
-      let data;
-      try {
-        data = JSON.parse(raw);
-      } catch(parseErr) {
-        if(res.status === 404){
-          throw new Error('הקובץ api/extract.js לא נמצא בשרת. ודאו שהעליתם אותו לתיקיית api.');
+      // OCR 100% gratuito: renderiza cada página como imagen (pdf.js) y
+      // extrae el texto hebreo con Tesseract.js, sin servidores ni claves.
+      const buf = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+      let fullText = '';
+      const worker = await Tesseract.createWorker('heb');
+      try{
+        for(let i = 1; i <= pdf.numPages; i++){
+          document.getElementById('fileZoneLabel').textContent =
+            `מזהה טקסט בעברית - עמוד ${i} מתוך ${pdf.numPages}... (יכול לקחת זמן)`;
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({scale: 2});
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          await page.render({canvasContext: ctx, viewport: viewport}).promise;
+          const { data: ocrData } = await worker.recognize(canvas);
+          fullText += (ocrData.text || '') + '\n\n';
         }
-        throw new Error('תשובה לא תקינה מהשרת (קוד ' + res.status + '). בדקו שהקובץ api/extract.js הועלה נכון.');
+      } finally {
+        await worker.terminate();
       }
-      if(!res.ok || data.error){
-        throw new Error(data.error || 'שגיאה בחילוץ');
+      pendingFileText = fullText.trim();
+      if(!pendingFileText){
+        throw new Error('לא הצלחתי לזהות טקסט בקובץ. ודאו שה-PDF ברור וקריא.');
       }
-      pendingFileText = data.text;
     } else if(ext === 'docx'){
       const buf = await file.arrayBuffer();
       const result = await mammoth.extractRawText({arrayBuffer: buf});
@@ -810,6 +801,51 @@ function setRate(r){
 }
 
 // ---------- PROCESAMIENTO CON IA (resumen / lectura amigable) ----------
+// ---------- RESUMEN EXTRACTIVO (100% local, sin servidor ni clave) ----------
+// Lista breve de palabras muy comunes en hebreo que no aportan al puntaje de importancia.
+const HEBREW_STOPWORDS = new Set([
+  'את','של','על','אל','עם','גם','לא','זה','זו','זאת','הוא','היא','הם','הן',
+  'אני','אתה','את','אתם','אתן','אנחנו','כי','אבל','או','כמו','יותר','פחות',
+  'כך','שם','כאן','מה','מי','איך','למה','כאשר','אשר','היה','היו','יש','אין',
+  'רק','גם','כל','כלל','עוד','אז','כן','לו','לה','להם','זהו','זוהי','ולא',
+  'אם','כדי','בין','אחר','אחרי','לפני','תוך','דרך','לגבי','מתוך'
+]);
+
+function stripNiqqud(word){
+  return (word || '').replace(/[^\u0590-\u05FF]/g, '');
+}
+
+function extractiveSummarize(text, ratio){
+  const sentences = splitChunks(text);
+  if(sentences.length <= 4) return sentences.join(' ');
+
+  // Frecuencia de palabras (excluyendo stopwords y palabras muy cortas)
+  const freq = {};
+  sentences.forEach(s => {
+    s.split(/\s+/).forEach(raw => {
+      const w = stripNiqqud(raw);
+      if(w.length < 2 || HEBREW_STOPWORDS.has(w)) return;
+      freq[w] = (freq[w] || 0) + 1;
+    });
+  });
+
+  // Puntaje por frase = suma de frecuencias / cantidad de palabras (evita premiar frases largas)
+  const scored = sentences.map((s, i) => {
+    const words = s.split(/\s+/);
+    let score = 0;
+    words.forEach(raw => {
+      const w = stripNiqqud(raw);
+      if(freq[w]) score += freq[w];
+    });
+    return { i, s, score: words.length ? score / words.length : 0 };
+  });
+
+  const n = Math.max(3, Math.round(sentences.length * ratio));
+  const top = scored.slice().sort((a, b) => b.score - a.score).slice(0, n);
+  top.sort((a, b) => a.i - b.i); // volver a ordenar según aparición original
+  return top.map(t => t.s).join(' ');
+}
+
 async function processCurrent(mode){
   if(!currentContent || !currentContent.trim()){
     document.getElementById('summaryStatus').textContent = 'אין טקסט לעיבוד.';
@@ -824,38 +860,29 @@ async function processCurrent(mode){
   isPlaying = false;
   manualStop = true;
   speechSynthesis.cancel();
-  status.textContent = mode === 'podcast' ? 'מכין גרסת פודקאסט... (עד דקה)' : 'יוצר תקציר... (עד דקה)';
+  status.textContent = mode === 'podcast' ? 'מכין גרסה מקוצרת...' : 'יוצר תקציר...';
 
   try{
-    const res = await fetch('/api/summarize', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        text: currentContent,
-        mode: mode,
-        title: currentDoc ? currentDoc.title : ''
-      })
-    });
-    const raw = await res.text();
-    let data;
-    try {
-      data = JSON.parse(raw);
-    } catch(parseErr) {
-      if(res.status === 404){
-        throw new Error('הקובץ api/summarize.js לא נמצא בשרת. ודאו שהעליתם אותו לתיקיית api.');
-      }
-      throw new Error('תשובה לא תקינה מהשרת (קוד ' + res.status + ').');
+    // Pequeña pausa para que la interfaz muestre el estado antes de procesar
+    await new Promise(r => setTimeout(r, 50));
+
+    const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
+    let result;
+    if(mode === 'podcast'){
+      const body = extractiveSummarize(currentContent, 0.4);
+      result = `הנה סיכום של "${baseTitle}". ${body}`;
+    } else {
+      result = extractiveSummarize(currentContent, 0.25);
     }
-    if(!res.ok || data.error){
-      throw new Error(data.error || 'שגיאה');
+
+    if(!result || !result.trim()){
+      throw new Error('לא הצלחתי ליצור תקציר מהטקסט הזה.');
     }
-    const result = data.summary;
 
     // 1) Guardar como documento nuevo en la cola (para no perderlo)
     const id = 'd' + Date.now();
     const newChunks = splitChunks(result);
-    const baseTitle = currentDoc ? currentDoc.title : 'מסמך';
-    const prefix = mode === 'podcast' ? 'פודקאסט: ' : 'תקציר: ';
+    const prefix = mode === 'podcast' ? 'תמצית: ' : 'תקציר: ';
     const doc = {id, title: prefix + baseTitle, createdAt: Date.now(), chunkCount: newChunks.length, progress: 0};
     documents.push(doc);
     await window.storage.set('documents-list', JSON.stringify(documents), false);
@@ -871,7 +898,7 @@ async function processCurrent(mode){
     updateUI();
 
     // 3) Empezar a leerlo automáticamente
-    status.textContent = mode === 'podcast' ? '✓ קורא את גרסת הפודקאסט' : '✓ קורא את התקציר';
+    status.textContent = '✓ קורא את התקציר';
     manualStop = false;
     isPlaying = true;
     speakChunk(0);
